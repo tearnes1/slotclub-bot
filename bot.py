@@ -3,20 +3,24 @@ import os
 import json
 import time
 
+# ==== НАСТРОЙКИ ====
+
 TOKEN = os.environ.get("BOT_TOKEN")
-bot = telebot.TeleBot(TOKEN)
 
-DATA_FILE = "data.json"
+ADMINS = [7987479496, 7452023277]  # твои ID
 
-# Твои ID
-ADMINS = [7987479496, 7452023277]
-
-# Укажи канал без https://
-CHANNEL_USERNAME = "SlotClubRF"
+CHANNEL_USERNAME = "slotclubrf"  # без @
 
 PARTNER_LINK = "https://sneket.xyz/ref/834116"
 
-# ---------------- БАЗА ----------------
+DATA_FILE = "data.json"
+
+# ====================
+
+bot = telebot.TeleBot(TOKEN)
+
+
+# ---------- БАЗА ----------
 
 def load_data():
     try:
@@ -25,13 +29,16 @@ def load_data():
     except:
         return {"users": [], "clicks": 0}
 
+
 def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f)
 
+
 data = load_data()
 
-# ---------------- ПРОВЕРКА ПОДПИСКИ ----------------
+
+# ---------- ПРОВЕРКА ПОДПИСКИ ----------
 
 def is_subscribed(user_id):
     try:
@@ -40,71 +47,74 @@ def is_subscribed(user_id):
     except:
         return False
 
-# ---------------- /START ----------------
+
+# ---------- START ----------
 
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
 
-    # анти-бот простая задержка
-    time.sleep(0.5)
+    time.sleep(0.3)
 
     if user_id not in data["users"]:
         data["users"].append(user_id)
         save_data(data)
 
-        # уведомление админу
         for admin in ADMINS:
-            bot.send_message(admin, f"👤 Новый пользователь: {user_id}")
+            try:
+                bot.send_message(admin, f"👤 Новый пользователь: {user_id}")
+            except:
+                pass
 
     markup = telebot.types.InlineKeyboardMarkup()
 
     if not is_subscribed(user_id):
-        subscribe_button = telebot.types.InlineKeyboardButton(
-            text="✅ Подписаться на канал",
+        btn1 = telebot.types.InlineKeyboardButton(
+            text="✅ Подписаться",
             url=f"https://t.me/{CHANNEL_USERNAME}"
         )
-        check_button = telebot.types.InlineKeyboardButton(
+        btn2 = telebot.types.InlineKeyboardButton(
             text="🔄 Проверить подписку",
             callback_data="check_sub"
         )
-        markup.add(subscribe_button)
-        markup.add(check_button)
+        markup.add(btn1)
+        markup.add(btn2)
 
         bot.send_message(
             message.chat.id,
-            "Чтобы получить доступ, подпишитесь на канал.",
+            "Для получения доступа подпишитесь на канал.",
             reply_markup=markup
         )
         return
 
-    access_button = telebot.types.InlineKeyboardButton(
+    btn = telebot.types.InlineKeyboardButton(
         text="🎰 Получить доступ",
         callback_data="get_access"
     )
-    markup.add(access_button)
+    markup.add(btn)
 
     bot.send_message(
         message.chat.id,
         "👋 Добро пожаловать в Slot Club | РФ\n\n"
-        "Нажмите кнопку ниже, чтобы получить доступ.\n\n"
+        "Нажмите кнопку ниже для получения доступа.\n\n"
         "⚠ 18+ Играйте ответственно.",
         reply_markup=markup
     )
 
-# ---------------- ПРОВЕРКА ПОДПИСКИ ----------------
+
+# ---------- ПРОВЕРКА ----------
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
-def check_subscription(call):
+def check_sub(call):
     if is_subscribed(call.from_user.id):
         bot.answer_callback_query(call.id, "✅ Подписка подтверждена")
 
         markup = telebot.types.InlineKeyboardMarkup()
-        access_button = telebot.types.InlineKeyboardButton(
+        btn = telebot.types.InlineKeyboardButton(
             text="🎰 Получить доступ",
             callback_data="get_access"
         )
-        markup.add(access_button)
+        markup.add(btn)
 
         bot.send_message(call.message.chat.id,
                          "Теперь можете получить доступ.",
@@ -112,7 +122,8 @@ def check_subscription(call):
     else:
         bot.answer_callback_query(call.id, "❌ Вы не подписаны")
 
-# ---------------- ВЫДАЧА ССЫЛКИ ----------------
+
+# ---------- ДОСТУП ----------
 
 @bot.callback_query_handler(func=lambda call: call.data == "get_access")
 def send_link(call):
@@ -120,14 +131,19 @@ def send_link(call):
     save_data(data)
 
     for admin in ADMINS:
-        bot.send_message(admin, f"🎯 Нажатие доступа от {call.from_user.id}")
+        try:
+            bot.send_message(admin,
+                             f"🎯 Клик доступа от {call.from_user.id}")
+        except:
+            pass
 
     bot.send_message(
         call.message.chat.id,
-        f"✅ Доступ активирован\n\nВот ссылка:\n{PARTNER_LINK}"
+        f"✅ Доступ активирован\n\n{PARTNER_LINK}"
     )
 
-# ---------------- СТАТИСТИКА ----------------
+
+# ---------- СТАТИСТИКА ----------
 
 @bot.message_handler(commands=['stats'])
 def stats(message):
@@ -144,7 +160,8 @@ def stats(message):
         f"🎯 Нажатий: {total_clicks}"
     )
 
-# ---------------- РАССЫЛКА ----------------
+
+# ---------- РАССЫЛКА ----------
 
 @bot.message_handler(commands=['broadcast'])
 def broadcast(message):
@@ -162,5 +179,6 @@ def broadcast(message):
             pass
 
     bot.send_message(message.chat.id, f"✅ Отправлено: {sent}")
+
 
 bot.infinity_polling()
