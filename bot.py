@@ -12,7 +12,7 @@ DATA_FILE = "data.json"
 ADMINS = [7987479496, 7452023277]
 
 # Укажи канал без https://
-CHANNEL_USERNAME = "Slot Club | РФ"
+CHANNEL_USERNAME = "SlotClubRF"
 
 PARTNER_LINK = "https://sneket.xyz/ref/834116"
 
