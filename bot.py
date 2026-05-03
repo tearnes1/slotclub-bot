@@ -3,31 +3,26 @@ import os
 import json
 import time
 
-# ==== НАСТРОЙКИ ====
-
 TOKEN = os.environ.get("BOT_TOKEN")
 
-ADMINS = [7987479496, 7452023277]  # твои ID
+ADMINS = [7987479496, 7452023277]
 
 CHANNEL_USERNAME = "slotclubrf"  # без @
-
 PARTNER_LINK = "https://sneket.xyz/ref/834116"
 
 DATA_FILE = "data.json"
 
-# ====================
-
 bot = telebot.TeleBot(TOKEN)
 
 
-# ---------- БАЗА ----------
+# -------- БАЗА --------
 
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     except:
-        return {"users": [], "clicks": 0}
+        return {"users": {}, "clicks": 0}
 
 
 def save_data(data):
@@ -38,7 +33,20 @@ def save_data(data):
 data = load_data()
 
 
-# ---------- ПРОВЕРКА ПОДПИСКИ ----------
+# -------- УТИЛИТА ЮЗЕРА --------
+
+def format_user(user):
+    username = f"@{user.username}" if user.username else None
+    full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+    user_id = user.id
+
+    if username:
+        return f"{username} | {full_name} | ID: {user_id}"
+    else:
+        return f"{full_name} | ID: {user_id}"
+
+
+# -------- ПРОВЕРКА ПОДПИСКИ --------
 
 def is_subscribed(user_id):
     try:
@@ -48,27 +56,33 @@ def is_subscribed(user_id):
         return False
 
 
-# ---------- START ----------
+# -------- START --------
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    user_id = message.from_user.id
+    user = message.from_user
+    user_id = str(user.id)
 
     time.sleep(0.3)
 
     if user_id not in data["users"]:
-        data["users"].append(user_id)
+        data["users"][user_id] = {
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
         save_data(data)
 
         for admin in ADMINS:
             try:
-                bot.send_message(admin, f"👤 Новый пользователь: {user_id}")
+                bot.send_message(admin,
+                                 f"👤 Новый пользователь:\n{format_user(user)}")
             except:
                 pass
 
     markup = telebot.types.InlineKeyboardMarkup()
 
-    if not is_subscribed(user_id):
+    if not is_subscribed(user.id):
         btn1 = telebot.types.InlineKeyboardButton(
             text="✅ Подписаться",
             url=f"https://t.me/{CHANNEL_USERNAME}"
@@ -102,7 +116,7 @@ def start(message):
     )
 
 
-# ---------- ПРОВЕРКА ----------
+# -------- ПРОВЕРКА --------
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_sub(call):
@@ -123,17 +137,19 @@ def check_sub(call):
         bot.answer_callback_query(call.id, "❌ Вы не подписаны")
 
 
-# ---------- ДОСТУП ----------
+# -------- ДОСТУП --------
 
 @bot.callback_query_handler(func=lambda call: call.data == "get_access")
 def send_link(call):
+    user = call.from_user
+
     data["clicks"] += 1
     save_data(data)
 
     for admin in ADMINS:
         try:
             bot.send_message(admin,
-                             f"🎯 Клик доступа от {call.from_user.id}")
+                             f"🎯 Клик доступа:\n{format_user(user)}")
         except:
             pass
 
@@ -143,7 +159,7 @@ def send_link(call):
     )
 
 
-# ---------- СТАТИСТИКА ----------
+# -------- СТАТИСТИКА --------
 
 @bot.message_handler(commands=['stats'])
 def stats(message):
@@ -161,24 +177,25 @@ def stats(message):
     )
 
 
-# ---------- РАССЫЛКА ----------
+# -------- СПИСОК ЮЗЕРОВ --------
 
-@bot.message_handler(commands=['broadcast'])
-def broadcast(message):
+@bot.message_handler(commands=['users'])
+def users_list(message):
     if message.from_user.id not in ADMINS:
         return
 
-    text = message.text.replace("/broadcast ", "")
+    text = "👥 Пользователи:\n\n"
 
-    sent = 0
-    for user_id in data["users"]:
-        try:
-            bot.send_message(user_id, text)
-            sent += 1
-        except:
-            pass
+    for uid, info in data["users"].items():
+        username = f"@{info['username']}" if info["username"] else None
+        full_name = f"{info['first_name'] or ''} {info['last_name'] or ''}".strip()
 
-    bot.send_message(message.chat.id, f"✅ Отправлено: {sent}")
+        if username:
+            text += f"{username} | {full_name} | ID: {uid}\n"
+        else:
+            text += f"{full_name} | ID: {uid}\n"
+
+    bot.send_message(message.chat.id, text[:4000])
 
 
 bot.infinity_polling()
