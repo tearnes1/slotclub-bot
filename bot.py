@@ -1,7 +1,7 @@
 import telebot
 import os
 
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("8196233487:AAEW0SCArs3zD1b9cxDu6D0SmC5jVD2-UTI")
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -10,7 +10,7 @@ def start(message):
     markup = telebot.types.InlineKeyboardMarkup()
     button = telebot.types.InlineKeyboardButton(
         text="🎰 Получить доступ",
-        url="ТВОЯ_ПАРТНЕРСКАЯ_ССЫЛКА"
+        url="https://sneket.xyz/ref/834116"
     )
     markup.add(button)
 
